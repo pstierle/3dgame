@@ -1,4 +1,6 @@
 .vscode
 src/*.o
+lib/glad/glad.o
 game.exe
 game
+Makefile
