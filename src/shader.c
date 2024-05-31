@@ -24,11 +24,10 @@ char *read_file(char path[])
         if (i >= buffer_size)
         {
             buffer_size += 1000;
-            buffer = realloc(buffer, buffer_size);
+            buffer = realloc(buffer, buffer_size + 1); // +1 for the null terminator
             if (buffer == NULL)
             {
                 printf("Error: while reading file.\n");
-                free(buffer);
                 fclose(file);
                 exit(1);
             }
@@ -36,6 +35,9 @@ char *read_file(char path[])
         buffer[i] = character;
         i++;
     }
+
+    // Null-terminate the buffer
+    buffer[i] = '\0';
 
     fclose(file);
 
@@ -62,7 +64,7 @@ void check_shader_status(GLuint shader_id)
     }
 }
 
-void init_shader()
+void shader_init()
 {
     char *fragment_shader = read_file("shaders/fragment_shader.glsl");
     char *vertex_shader = read_file("shaders/vertex_shader.glsl");

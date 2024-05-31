@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "util.h": "c",
+    "window.h": "c",
+    "glad.h": "c"
+  }
+}

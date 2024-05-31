@@ -5,4 +5,4 @@
 
 extern GLuint program_id;
 
-void init_shader();
+void shader_init();
