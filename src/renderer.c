@@ -17,10 +17,8 @@ extern Camera *camera;
 
 void test_scene_init()
 {
-    // Initialize VBO data with enough space for all cubes
     renderer_vbo_data(CUBE_SIZE * NUM_CUBES, NULL);
 
-    // Define the positions of the vertices of a single cube
     vec3 cube_positions[] = {
         {0.5f, 0.5f, 0.5f},
         {-0.5f, 0.5f, -0.5f},
@@ -32,15 +30,15 @@ void test_scene_init()
         {-0.5f, -0.5f, 0.5f},
     };
 
-    for (int i = 0; i < NUM_CUBES; i++) // Note the change in the loop index starting from 0
+    for (int i = 0; i < NUM_CUBES; i++)
     {
         vec3 cube[8];
         for (int j = 0; j < 8; j++)
         {
             glm_vec3_copy(cube_positions[j], cube[j]);
-            cube[j][0] += i * 1.0f; // Apply the offset to the x value
+            cube[j][0] += i * 1.0f;
         }
-        size_t offset = i * CUBE_SIZE; // Adjust the offset calculation
+        size_t offset = i * CUBE_SIZE;
         renderer_vbo_sub_data(offset, CUBE_SIZE, cube);
     }
 
@@ -60,21 +58,20 @@ void test_scene_init()
         2, 1, 4,
         0, 2, 7};
 
-    // Initialize IBO data with enough space for all cubes
     renderer_ibo_data(36 * sizeof(GLushort) * NUM_CUBES, NULL);
 
-    for (int i = 0; i < NUM_CUBES; i++) // Note the change in the loop index starting from 0
+    for (int i = 0; i < NUM_CUBES; i++)
     {
-        size_t offset = i * 36 * sizeof(GLushort); // Adjust the offset calculation
+        size_t offset = i * 36 * sizeof(GLushort);
         renderer_ibo_sub_data(offset, 36 * sizeof(GLushort), indices_cube);
     }
 }
 
 void test_scence_render()
 {
-    for (int i = 0; i < NUM_CUBES; i++) // Note the change in the loop index starting from 0
+    for (int i = 0; i < NUM_CUBES; i++)
     {
-        size_t offset = i * 36 * sizeof(GLushort); // Adjust the offset calculation
+        size_t offset = i * 36 * sizeof(GLushort);
         renderer_ibo_draw(36, (void *)offset);
     }
 }
