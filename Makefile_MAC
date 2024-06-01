@@ -1,6 +1,6 @@
 CC = clang
 CFLAGS = -Wall -Wextra -Iinclude -Iinclude/GLFW -Iinclude/glad -Iinclude/KHR 
-LDFLAGS = -Llib -lglfw3 -framework OpenGL -framework IOKit -framework CoreVideo -framework Cocoa
+LDFLAGS = -Llib/mac -lglfw3 -framework OpenGL -framework IOKit -framework CoreVideo -framework Cocoa
 
 SRCDIR = src
 OBJDIR = obj

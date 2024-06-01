@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cglm/cglm.h"
+#include <glad/glad.h>
 
 #define WINDOW_WIDTH 1600
 #define WINDOW_HEIGHT 900
@@ -24,6 +25,16 @@ typedef struct Renderer
 {
     float delta_time;
     float last_frame_time;
+
+    bool wireframe_enabled;
+
+    GLuint ibo_id;
+    GLuint vbo_id;
+    GLuint vao_id;
+
+    GLuint model_location;
+    GLuint view_location;
+    GLuint projection_location;
 } Renderer;
 
 typedef struct Mouse

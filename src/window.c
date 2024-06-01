@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "camera.h"
+#include "renderer.h"
+#include "util.h"
 
 GLFWwindow *window;
 Mouse *mouse;
@@ -23,7 +25,7 @@ void window_mouse_callback(GLFWwindow *window, double x_pos, double y_pos)
     mouse->y = y_pos;
 }
 
-void window_scroll_callback(GLFWwindow* window, double x_offset, double y_offset)
+void window_scroll_callback(GLFWwindow *window, double x_offset, double y_offset)
 {
     camera_mouse_scroll((float)y_offset);
 }
@@ -69,8 +71,10 @@ void window_init()
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, window_mouse_callback);
-    glfwSetScrollCallback(window, window_scroll_callback); 
+    glfwSetScrollCallback(window, window_scroll_callback);
 }
+
+int wireframe_key_state = GLFW_RELEASE;
 
 void window_input()
 {
@@ -112,4 +116,11 @@ void window_input()
     {
         keyboard->d_pressed = false;
     }
+
+    int new_wireframe_key_state = glfwGetKey(window, GLFW_KEY_U);
+    if (new_wireframe_key_state == GLFW_RELEASE && wireframe_key_state == GLFW_PRESS)
+    {
+        renderer_toogle_wireframe();
+    }
+    wireframe_key_state = new_wireframe_key_state;
 }
