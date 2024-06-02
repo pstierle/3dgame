@@ -4,6 +4,32 @@
 
 extern State state;
 
+bool isSurrounded(vec3 positions[], int index, int num_cubes, int position_per_cube)
+{
+    float x = positions[index][0];
+    float y = positions[index][1];
+    float z = positions[index][2];
+
+    // Check if all neighboring positions are occupied by other cubes
+    for (int i = 0; i < num_cubes * position_per_cube; ++i)
+    {
+        if (i == index)
+            continue; // Skip the current cube's position
+        float other_x = positions[i][0];
+        float other_y = positions[i][1];
+        float other_z = positions[i][2];
+
+        // Check if the position is adjacent in all dimensions
+        if ((other_x == x - 1 || other_x == x + 1 || other_x == x) &&
+            (other_y == y - 1 || other_y == y + 1 || other_y == y) &&
+            (other_z == z - 1 || other_z == z + 1 || other_z == z))
+        {
+            return false; // Cube is not surrounded
+        }
+    }
+    return true; // Cube is surrounded
+}
+
 void renderer_init()
 {
     Renderer *renderer = &state.renderer;
@@ -24,7 +50,7 @@ void renderer_init()
     int num_cubes = 1000;
     int position_per_cube = 8;
 
-    vec3 cube_positions[] = {
+    vec3 cube_positions[8] = {
         {0.5f, 0.5f, 0.5f},
         {-0.5f, 0.5f, -0.5f},
         {-0.5f, 0.5f, 0.5f},
@@ -56,7 +82,16 @@ void renderer_init()
         }
     }
 
-    renderer_vbo_data(num_cubes * position_per_cube * 3 * sizeof(float), cube_block_positions);
+    int num_removed = 0;
+    for (int i = 0; i < num_cubes * position_per_cube; ++i)
+    {
+        if (isSurrounded(cube_block_positions, i, num_cubes, position_per_cube))
+        {
+            num_removed++;
+        }
+    }
+
+    renderer_vbo_data((num_cubes - num_removed) * position_per_cube * sizeof(vec3), cube_block_positions);
     renderer_vbo_attr(0, 3);
 
     GLushort cube_indices[] = {
@@ -75,7 +110,7 @@ void renderer_init()
 
     GLushort cube_block_indices[36000];
 
-    for (int i = 0; i < 1000; ++i)
+    for (int i = 0; i < num_cubes - num_removed; ++i)
     {
         for (int j = 0; j < 36; ++j)
         {
@@ -83,7 +118,7 @@ void renderer_init()
         }
     }
 
-    renderer_ibo_data(36000, cube_block_indices);
+    renderer_ibo_data((num_cubes - num_removed) * 36, cube_block_indices);
 }
 
 void renderer_vbo_data(GLsizeiptr size, void *data)
