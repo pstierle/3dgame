@@ -18,8 +18,6 @@ int main()
 
     while (!glfwWindowShouldClose(state.window.handle))
     {
-        glfwPollEvents();
-
         window_input();
         camera_update();
         renderer_update();

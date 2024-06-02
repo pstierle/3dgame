@@ -35,6 +35,18 @@ void window_scroll_callback(GLFWwindow *window, double x_offset, double y_offset
     camera_mouse_scroll((float)y_offset);
 }
 
+void window_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    (void)window;
+    (void)scancode;
+    (void)mods;
+
+    if (key == GLFW_KEY_U && action == GLFW_PRESS)
+    {
+        renderer_toogle_wireframe();
+    }
+}
+
 void window_init()
 {
     Window *window = &state.window;
@@ -80,14 +92,18 @@ void window_init()
     }
 
     glfwSetInputMode(window->handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     glfwSetCursorPosCallback(window->handle, window_mouse_callback);
     glfwSetScrollCallback(window->handle, window_scroll_callback);
-}
+    glfwSetKeyCallback(window->handle, window_key_callback);
 
-int wireframe_key_state = GLFW_RELEASE;
+    glfwSetInputMode(window->handle, GLFW_LOCK_KEY_MODS, GLFW_TRUE);
+}
 
 void window_input()
 {
+    glfwPollEvents();
+
     Keyboard *keyboard = &state.window.keyboard;
 
     if (glfwGetKey(state.window.handle, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -128,11 +144,4 @@ void window_input()
     {
         keyboard->d_pressed = false;
     }
-
-    int new_wireframe_key_state = glfwGetKey(state.window.handle, GLFW_KEY_U);
-    if (new_wireframe_key_state == GLFW_RELEASE && wireframe_key_state == GLFW_PRESS)
-    {
-        renderer_toogle_wireframe();
-    }
-    wireframe_key_state = new_wireframe_key_state;
 }
