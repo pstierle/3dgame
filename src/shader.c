@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "shader.h"
+#include "defines.h"
 
-GLuint program_id;
+extern State state;
 
 char *read_file(char path[])
 {
@@ -66,6 +67,8 @@ void check_shader_status(GLuint shader_id)
 
 void shader_init()
 {
+    Renderer *renderer = &state.renderer;
+
     char *fragment_shader = read_file("shaders/fragment_shader.glsl");
     char *vertex_shader = read_file("shaders/vertex_shader.glsl");
 
@@ -84,12 +87,12 @@ void shader_init()
     check_shader_status(fragment_shader_id);
     check_shader_status(vertex_shader_id);
 
-    program_id = glCreateProgram();
+    renderer->program_id = glCreateProgram();
 
-    glAttachShader(program_id, fragment_shader_id);
-    glAttachShader(program_id, vertex_shader_id);
+    glAttachShader(renderer->program_id, fragment_shader_id);
+    glAttachShader(renderer->program_id, vertex_shader_id);
 
-    glLinkProgram(program_id);
+    glLinkProgram(renderer->program_id);
 
     glDeleteShader(fragment_shader_id);
     glDeleteShader(vertex_shader_id);

@@ -1,17 +1,19 @@
 #include "window.h"
-#include <glad/glad.h>
+#include "gfx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "camera.h"
 #include "renderer.h"
 #include "util.h"
 
-GLFWwindow *window;
-Mouse *mouse;
-Keyboard *keyboard;
+extern State state;
 
 void window_mouse_callback(GLFWwindow *window, double x_pos, double y_pos)
 {
+    Mouse *mouse = &state.window.mouse;
+
+    (void)window;
+
     if (mouse->first_move_handled == false)
     {
         mouse->x = x_pos;
@@ -27,17 +29,25 @@ void window_mouse_callback(GLFWwindow *window, double x_pos, double y_pos)
 
 void window_scroll_callback(GLFWwindow *window, double x_offset, double y_offset)
 {
+    (void)window;
+    (void)x_offset;
+
     camera_mouse_scroll((float)y_offset);
 }
 
 void window_init()
 {
-    mouse = malloc(sizeof(Mouse));
-    mouse->x = WINDOW_WIDTH / 2;
-    mouse->y = WINDOW_HEIGHT / 2;
+    Window *window = &state.window;
+    Keyboard *keyboard = &state.window.keyboard;
+    Mouse *mouse = &state.window.mouse;
+
+    window->width = 1600;
+    window->height = 900;
+
+    mouse->x = window->width / 2;
+    mouse->y = window->height / 2;
     mouse->first_move_handled = false;
 
-    keyboard = malloc(sizeof(Keyboard));
     keyboard->w_pressed = false;
     keyboard->a_pressed = false;
     keyboard->s_pressed = false;
@@ -53,15 +63,15 @@ void window_init()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Game", NULL, NULL);
+    window->handle = glfwCreateWindow(window->width, window->height, "Game", NULL, NULL);
 
-    if (!window)
+    if (!window->handle)
     {
         printf("Failed to create GLFW window\n");
         exit(1);
     }
 
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(window->handle);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -69,55 +79,57 @@ void window_init()
         exit(1);
     }
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window, window_mouse_callback);
-    glfwSetScrollCallback(window, window_scroll_callback);
+    glfwSetInputMode(window->handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window->handle, window_mouse_callback);
+    glfwSetScrollCallback(window->handle, window_scroll_callback);
 }
 
 int wireframe_key_state = GLFW_RELEASE;
 
 void window_input()
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    Keyboard *keyboard = &state.window.keyboard;
+
+    if (glfwGetKey(state.window.handle, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     {
-        glfwSetWindowShouldClose(window, true);
+        glfwSetWindowShouldClose(state.window.handle, true);
         return;
     }
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_W) == GLFW_PRESS)
     {
         keyboard->w_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_S) == GLFW_PRESS)
     {
         keyboard->s_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_A) == GLFW_PRESS)
     {
         keyboard->a_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_D) == GLFW_PRESS)
     {
         keyboard->d_pressed = true;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_RELEASE)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_W) == GLFW_RELEASE)
     {
         keyboard->w_pressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_RELEASE)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_S) == GLFW_RELEASE)
     {
         keyboard->s_pressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_RELEASE)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_A) == GLFW_RELEASE)
     {
         keyboard->a_pressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_RELEASE)
+    if (glfwGetKey(state.window.handle, GLFW_KEY_D) == GLFW_RELEASE)
     {
         keyboard->d_pressed = false;
     }
 
-    int new_wireframe_key_state = glfwGetKey(window, GLFW_KEY_U);
+    int new_wireframe_key_state = glfwGetKey(state.window.handle, GLFW_KEY_U);
     if (new_wireframe_key_state == GLFW_RELEASE && wireframe_key_state == GLFW_PRESS)
     {
         renderer_toogle_wireframe();

@@ -2,8 +2,6 @@
 
 #include "defines.h"
 
-extern Renderer *renderer;
-
 void renderer_init();
 void renderer_update();
 void renderer_toogle_wireframe();

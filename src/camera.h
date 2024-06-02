@@ -1,8 +1,6 @@
 #pragma once
 #include "defines.h"
 
-extern Camera *camera;
-
 void camera_init();
 void camera_update();
 

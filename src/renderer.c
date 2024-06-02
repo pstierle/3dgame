@@ -1,19 +1,16 @@
 #define GLFW_INCLUDE_NONE
 
 #include "renderer.h"
-#include <GLFW/glfw3.h>
-#include "glad/glad.h"
+#include "gfx.h"
 #include "util.h"
-
-Renderer *renderer;
-extern GLuint program_id;
-extern Camera *camera;
 
 #define NUM_CUBES 10
 #define NUM_CUBE_POSITION_ELEMENTS 3
 #define NUM_CUBE_POSITIONS 8
 #define CUBE_POSITION_ELEMENT_SIZE sizeof(float)
 #define CUBE_SIZE NUM_CUBE_POSITIONS *NUM_CUBE_POSITION_ELEMENTS *CUBE_POSITION_ELEMENT_SIZE
+
+extern State state;
 
 void test_scene_init()
 {
@@ -78,14 +75,15 @@ void test_scence_render()
 
 void renderer_init()
 {
-    renderer = malloc(sizeof(Renderer));
+    Renderer *renderer = &state.renderer;
+
     renderer->delta_time = 0.0f;
     renderer->last_frame_time = glfwGetTime();
     renderer->wireframe_enabled = false;
 
-    renderer->model_location = glGetUniformLocation(program_id, "model");
-    renderer->view_location = glGetUniformLocation(program_id, "view");
-    renderer->projection_location = glGetUniformLocation(program_id, "projection");
+    renderer->model_location = glGetUniformLocation(renderer->program_id, "model");
+    renderer->view_location = glGetUniformLocation(renderer->program_id, "view");
+    renderer->projection_location = glGetUniformLocation(renderer->program_id, "projection");
 
     glGenVertexArrays(1, &renderer->vao_id);
     glGenBuffers(1, &renderer->vbo_id);
@@ -96,6 +94,8 @@ void renderer_init()
 
 void renderer_vbo_data(GLsizeiptr size, void *data)
 {
+    Renderer *renderer = &state.renderer;
+
     glBindVertexArray(renderer->vao_id);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
@@ -103,6 +103,8 @@ void renderer_vbo_data(GLsizeiptr size, void *data)
 
 void renderer_vbo_sub_data(GLintptr offset, GLsizeiptr size, void *data)
 {
+    Renderer *renderer = &state.renderer;
+
     glBindVertexArray(renderer->vao_id);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
     glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
@@ -110,6 +112,8 @@ void renderer_vbo_sub_data(GLintptr offset, GLsizeiptr size, void *data)
 
 void renderer_vbo_attr(GLuint index, GLint size)
 {
+    Renderer *renderer = &state.renderer;
+
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
     glEnableVertexAttribArray(index);
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, size * sizeof(float), (void *)0);
@@ -117,24 +121,33 @@ void renderer_vbo_attr(GLuint index, GLint size)
 
 void renderer_ibo_data(size_t size, void *data)
 {
+    Renderer *renderer = &state.renderer;
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ibo_id);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
 }
 
 void renderer_ibo_sub_data(GLintptr offset, GLsizeiptr size, const void *data)
 {
+    Renderer *renderer = &state.renderer;
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ibo_id);
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, size, data);
 }
 
 void renderer_ibo_draw(GLsizei count, void *indices)
 {
+    Renderer *renderer = &state.renderer;
+
     glBindVertexArray(renderer->vao_id);
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_SHORT, indices);
 }
 
 void renderer_update()
 {
+    Renderer *renderer = &state.renderer;
+    Camera *camera = &state.camera;
+
     float current_frame_time = glfwGetTime();
     renderer->delta_time = current_frame_time - renderer->last_frame_time;
     renderer->last_frame_time = current_frame_time;
@@ -158,9 +171,11 @@ void renderer_update()
 
 void renderer_render()
 {
+    Renderer *renderer = &state.renderer;
+
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(program_id);
+    glUseProgram(renderer->program_id);
 
     if (renderer->wireframe_enabled == true)
     {
@@ -176,6 +191,8 @@ void renderer_render()
 
 void renderer_toogle_wireframe()
 {
+    Renderer *renderer = &state.renderer;
+
     if (renderer->wireframe_enabled == true)
     {
         renderer->wireframe_enabled = false;

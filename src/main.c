@@ -1,7 +1,6 @@
 #define GLFW_INCLUDE_NONE
 
-#include <GLFW/glfw3.h>
-#include <glad/glad.h>
+#include "gfx.h"
 
 #include "defines.h"
 #include "camera.h"
@@ -11,7 +10,7 @@
 #include "cglm/cglm.h"
 #include "util.h"
 
-extern GLFWwindow *window;
+State state;
 
 int main()
 {
@@ -20,7 +19,7 @@ int main()
     renderer_init();
     camera_init();
 
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(state.window.handle))
     {
         glfwPollEvents();
 
@@ -30,7 +29,7 @@ int main()
 
         renderer_render();
 
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(state.window.handle);
     }
 
     glfwTerminate();

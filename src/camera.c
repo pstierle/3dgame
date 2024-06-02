@@ -1,16 +1,13 @@
 #include "camera.h"
 #include <stdlib.h>
-#include <GLFW/glfw3.h>
+#include "gfx.h"
 #include "util.h"
 
-Camera *camera;
-extern GLFWwindow *window;
-extern Renderer *renderer;
-extern Keyboard *keyboard;
+extern State state;
 
 void camera_init()
 {
-    camera = malloc(sizeof(Camera));
+    Camera *camera = &state.camera;
 
     glm_vec3_copy((vec3){0.0f, 3.0f, 10.0f}, camera->position);
     glm_vec3_copy((vec3){0.0f, 0.0f, -1.0f}, camera->front);
@@ -23,16 +20,20 @@ void camera_init()
 
 void camera_update()
 {
+    Camera *camera = &state.camera;
+    Keyboard *keyboard = &state.window.keyboard;
+    float delta_time = state.renderer.delta_time;
+
     if (keyboard->w_pressed)
     {
         vec3 intermediate;
-        glm_vec3_scale(camera->front, CAMERA_SPEED * renderer->delta_time, intermediate);
+        glm_vec3_scale(camera->front, CAMERA_SPEED * delta_time, intermediate);
         glm_vec3_add(camera->position, intermediate, camera->position);
     }
     if (keyboard->s_pressed)
     {
         vec3 intermediate;
-        glm_vec3_scale(camera->front, CAMERA_SPEED * renderer->delta_time, intermediate);
+        glm_vec3_scale(camera->front, CAMERA_SPEED * delta_time, intermediate);
         glm_vec3_sub(camera->position, intermediate, camera->position);
     }
     if (keyboard->d_pressed)
@@ -40,7 +41,7 @@ void camera_update()
         vec3 intermediate;
         glm_vec3_cross(camera->front, camera->up, intermediate);
         glm_vec3_normalize(intermediate);
-        glm_vec3_scale(intermediate, CAMERA_SPEED * renderer->delta_time, intermediate);
+        glm_vec3_scale(intermediate, CAMERA_SPEED * delta_time, intermediate);
         glm_vec3_add(camera->position, intermediate, camera->position);
     }
     if (keyboard->a_pressed)
@@ -48,7 +49,7 @@ void camera_update()
         vec3 intermediate;
         glm_vec3_cross(camera->front, camera->up, intermediate);
         glm_vec3_normalize(intermediate);
-        glm_vec3_scale(intermediate, CAMERA_SPEED * renderer->delta_time, intermediate);
+        glm_vec3_scale(intermediate, CAMERA_SPEED * delta_time, intermediate);
         glm_vec3_sub(camera->position, intermediate, camera->position);
     }
 
@@ -66,6 +67,8 @@ void camera_update()
 
 void camera_mouse_move(float old_x, float new_x, float old_y, float new_y)
 {
+    Camera *camera = &state.camera;
+
     float x_offset = new_x - old_x;
     float y_offset = old_y - new_y;
 
@@ -83,6 +86,8 @@ void camera_mouse_move(float old_x, float new_x, float old_y, float new_y)
 
 void camera_mouse_scroll(float y_offset)
 {
+    Camera *camera = &state.camera;
+
     camera->fov -= y_offset;
     if (camera->fov < 1.0f)
         camera->fov = 1.0f;

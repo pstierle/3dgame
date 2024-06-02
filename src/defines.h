@@ -1,10 +1,7 @@
 #pragma once
 
 #include "cglm/cglm.h"
-#include <glad/glad.h>
-
-#define WINDOW_WIDTH 1600
-#define WINDOW_HEIGHT 900
+#include "gfx.h"
 
 #define CAMERA_SPEED 3.0f
 
@@ -27,6 +24,8 @@ typedef struct Renderer
     float last_frame_time;
 
     bool wireframe_enabled;
+
+    GLuint program_id;
 
     GLuint ibo_id;
     GLuint vbo_id;
@@ -51,3 +50,20 @@ typedef struct Keyboard
     bool s_pressed;
     bool d_pressed;
 } Keyboard;
+
+typedef struct Window
+{
+    GLFWwindow *handle;
+    int width, height;
+    Mouse mouse;
+    Keyboard keyboard;
+} Window;
+
+typedef struct State
+{
+    Window window;
+    Renderer renderer;
+    Camera camera;
+} State;
+
+extern struct State state;
