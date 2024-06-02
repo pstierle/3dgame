@@ -1,77 +1,8 @@
-#define GLFW_INCLUDE_NONE
-
 #include "renderer.h"
 #include "gfx.h"
 #include "util.h"
 
-#define NUM_CUBES 10
-#define NUM_CUBE_POSITION_ELEMENTS 3
-#define NUM_CUBE_POSITIONS 8
-#define CUBE_POSITION_ELEMENT_SIZE sizeof(float)
-#define CUBE_SIZE NUM_CUBE_POSITIONS *NUM_CUBE_POSITION_ELEMENTS *CUBE_POSITION_ELEMENT_SIZE
-
 extern State state;
-
-void test_scene_init()
-{
-    renderer_vbo_data(CUBE_SIZE * NUM_CUBES, NULL);
-
-    vec3 cube_positions[] = {
-        {0.5f, 0.5f, 0.5f},
-        {-0.5f, 0.5f, -0.5f},
-        {-0.5f, 0.5f, 0.5f},
-        {0.5f, -0.5f, -0.5f},
-        {-0.5f, -0.5f, -0.5f},
-        {0.5f, 0.5f, -0.5f},
-        {0.5f, -0.5f, 0.5f},
-        {-0.5f, -0.5f, 0.5f},
-    };
-
-    for (int i = 0; i < NUM_CUBES; i++)
-    {
-        vec3 cube[8];
-        for (int j = 0; j < 8; j++)
-        {
-            glm_vec3_copy(cube_positions[j], cube[j]);
-            cube[j][0] += i * 1.0f;
-        }
-        size_t offset = i * CUBE_SIZE;
-        renderer_vbo_sub_data(offset, CUBE_SIZE, cube);
-    }
-
-    renderer_vbo_attr(0, 3);
-
-    GLushort indices_cube[] = {
-        0, 1, 2,
-        1, 3, 4,
-        5, 6, 3,
-        7, 3, 6,
-        2, 4, 7,
-        0, 7, 6,
-        0, 5, 1,
-        1, 5, 3,
-        5, 0, 6,
-        7, 4, 3,
-        2, 1, 4,
-        0, 2, 7};
-
-    renderer_ibo_data(36 * sizeof(GLushort) * NUM_CUBES, NULL);
-
-    for (int i = 0; i < NUM_CUBES; i++)
-    {
-        size_t offset = i * 36 * sizeof(GLushort);
-        renderer_ibo_sub_data(offset, 36 * sizeof(GLushort), indices_cube);
-    }
-}
-
-void test_scence_render()
-{
-    for (int i = 0; i < NUM_CUBES; i++)
-    {
-        size_t offset = i * 36 * sizeof(GLushort);
-        renderer_ibo_draw(36, (void *)offset);
-    }
-}
 
 void renderer_init()
 {
@@ -89,58 +20,99 @@ void renderer_init()
     glGenBuffers(1, &renderer->vbo_id);
     glGenBuffers(1, &renderer->ibo_id);
 
-    test_scene_init();
+    // TEST SCENE
+    int num_cubes = 1000;
+    int position_per_cube = 8;
+
+    vec3 cube_positions[] = {
+        {0.5f, 0.5f, 0.5f},
+        {-0.5f, 0.5f, -0.5f},
+        {-0.5f, 0.5f, 0.5f},
+        {0.5f, -0.5f, -0.5f},
+        {-0.5f, -0.5f, -0.5f},
+        {0.5f, 0.5f, -0.5f},
+        {0.5f, -0.5f, 0.5f},
+        {-0.5f, -0.5f, 0.5f},
+    };
+
+    vec3 cube_block_positions[8000];
+
+    int index = 0;
+
+    for (int x = 0; x < 10; ++x)
+    {
+        for (int y = 0; y < 10; ++y)
+        {
+            for (int z = 0; z < 10; ++z)
+            {
+                for (int i = 0; i < position_per_cube; ++i)
+                {
+                    cube_block_positions[index][0] = cube_positions[i][0] + x;
+                    cube_block_positions[index][1] = cube_positions[i][1] + y;
+                    cube_block_positions[index][2] = cube_positions[i][2] + z;
+                    index++;
+                }
+            }
+        }
+    }
+
+    renderer_vbo_data(num_cubes * position_per_cube * 3 * sizeof(float), cube_block_positions);
+    renderer_vbo_attr(0, 3);
+
+    GLushort cube_indices[] = {
+        0, 1, 2,
+        1, 3, 4,
+        5, 6, 3,
+        7, 3, 6,
+        2, 4, 7,
+        0, 7, 6,
+        0, 5, 1,
+        1, 5, 3,
+        5, 0, 6,
+        7, 4, 3,
+        2, 1, 4,
+        0, 2, 7};
+
+    GLushort cube_block_indices[36000];
+
+    for (int i = 0; i < 1000; ++i)
+    {
+        for (int j = 0; j < 36; ++j)
+        {
+            cube_block_indices[i * 36 + j] = cube_indices[j] + i * 8;
+        }
+    }
+
+    renderer_ibo_data(36000, cube_block_indices);
 }
 
 void renderer_vbo_data(GLsizeiptr size, void *data)
 {
-    Renderer *renderer = &state.renderer;
-
-    glBindVertexArray(renderer->vao_id);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
+    glBindVertexArray(state.renderer.vao_id);
+    glBindBuffer(GL_ARRAY_BUFFER, state.renderer.vbo_id);
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-}
-
-void renderer_vbo_sub_data(GLintptr offset, GLsizeiptr size, void *data)
-{
-    Renderer *renderer = &state.renderer;
-
-    glBindVertexArray(renderer->vao_id);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
-    glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
 }
 
 void renderer_vbo_attr(GLuint index, GLint size)
 {
-    Renderer *renderer = &state.renderer;
-
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
+    glBindBuffer(GL_ARRAY_BUFFER, state.renderer.vbo_id);
     glEnableVertexAttribArray(index);
     glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, size * sizeof(float), (void *)0);
 }
 
-void renderer_ibo_data(size_t size, void *data)
+void renderer_ibo_data(int num_elements, void *data)
 {
-    Renderer *renderer = &state.renderer;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.renderer.ibo_id);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, num_elements * sizeof(GLushort), data, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ibo_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    Renderer *renderer = &state.renderer;
+    renderer->ibo_num_indices = num_elements;
 }
 
-void renderer_ibo_sub_data(GLintptr offset, GLsizeiptr size, const void *data)
+void renderer_ibo_draw(GLsizei count)
 {
-    Renderer *renderer = &state.renderer;
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ibo_id);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, size, data);
-}
-
-void renderer_ibo_draw(GLsizei count, void *indices)
-{
-    Renderer *renderer = &state.renderer;
-
-    glBindVertexArray(renderer->vao_id);
-    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_SHORT, indices);
+    glBindVertexArray(state.renderer.vbo_id);
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_SHORT, 0);
 }
 
 void renderer_update()
@@ -171,13 +143,11 @@ void renderer_update()
 
 void renderer_render()
 {
-    Renderer *renderer = &state.renderer;
-
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(renderer->program_id);
+    glUseProgram(state.renderer.program_id);
 
-    if (renderer->wireframe_enabled == true)
+    if (state.renderer.wireframe_enabled == true)
     {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
@@ -186,7 +156,7 @@ void renderer_render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
-    test_scence_render();
+    renderer_ibo_draw(state.renderer.ibo_num_indices);
 }
 
 void renderer_toogle_wireframe()
@@ -201,6 +171,4 @@ void renderer_toogle_wireframe()
     {
         renderer->wireframe_enabled = true;
     }
-    print_s("Wireframe Enabled Changed: ");
-    print_i(renderer->wireframe_enabled);
 }

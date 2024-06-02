@@ -3,9 +3,15 @@
 #include "cglm/cglm.h"
 #include "gfx.h"
 
-#define CAMERA_SPEED 3.0f
+#define CAMERA_SPEED 8.0f
+#define MOUSE_SENSITIVITY 0.2f
+#define VEC3_PER_CUBE 8
 
-#define MOUSE_SENSITIVITY 0.1f
+typedef struct Collection
+{
+    void *data;
+    size_t size;
+} Collection;
 
 typedef struct Camera
 {
@@ -30,6 +36,7 @@ typedef struct Renderer
     GLuint ibo_id;
     GLuint vbo_id;
     GLuint vao_id;
+    size_t ibo_num_indices;
 
     GLuint model_location;
     GLuint view_location;

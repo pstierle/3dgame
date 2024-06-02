@@ -1,7 +1,4 @@
-#define GLFW_INCLUDE_NONE
-
 #include "gfx.h"
-
 #include "defines.h"
 #include "camera.h"
 #include "shader.h"
