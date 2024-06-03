@@ -1,12 +1,15 @@
 #include "renderer.h"
 #include "gfx.h"
 #include "util.h"
+#define FNL_IMPL
+#include "noise.h"
+#include "time.h"
 
 extern State state;
 
-bool is_surrounded(vec3 positions[], int index, int position_data_size)
+bool is_surrounded(vec3 position_data[], int index, int position_data_size)
 {
-    vec3 pos = {positions[index][0], positions[index][1], positions[index][2]};
+    vec3 pos = {position_data[index][0], position_data[index][1], position_data[index][2]};
 
     bool has_neighbor_xp = false, has_neighbor_xm = false;
     bool has_neighbor_yp = false, has_neighbor_ym = false;
@@ -16,7 +19,7 @@ bool is_surrounded(vec3 positions[], int index, int position_data_size)
     {
         if (i == index)
             continue;
-        vec3 neighbor = {positions[i][0], positions[i][1], positions[i][2]};
+        vec3 neighbor = {position_data[i][0], position_data[i][1], position_data[i][2]};
 
         if (neighbor[0] == pos[0] + 1 && neighbor[1] == pos[1] && neighbor[2] == pos[2])
             has_neighbor_xp = true;
@@ -51,42 +54,47 @@ void renderer_init()
     glGenBuffers(1, &renderer->vbo_id);
     glGenBuffers(1, &renderer->ibo_id);
 
-    vec3 *position_data = malloc(8000 * sizeof(vec3));
+    int max_x = 200;
+    int max_y = 1;
+    int max_z = 200;
+
+    vec3 *position_data = malloc(max_x * max_y * max_z * sizeof(vec3));
     int position_data_size = 0;
+    int extra_added = 0;
 
-    for (int x = 0; x < 20; ++x)
+    fnl_state noise = fnlCreateState();
+
+    for (int x = 0; x < max_x; ++x)
     {
-        for (int y = 0; y < 20; ++y)
+        for (int y = 0; y < max_y; ++y)
         {
-            for (int z = 0; z < 20; ++z)
+            for (int z = 0; z < max_z; ++z)
             {
-                position_data[position_data_size][0] = (float)x;
-                position_data[position_data_size][1] = (float)y;
-                position_data[position_data_size][2] = (float)z;
+                float noise_val_y = fnlGetNoise3D(&noise, x, y, z);
+                float scaled_noise_val_y = fmaxf(0.0f, fminf(30.0f, noise_val_y * 20.0f + 10.0f));
+                float rounded_noise_val_y = roundf(scaled_noise_val_y);
+
+                position_data[position_data_size][0] = x;
+                position_data[position_data_size][1] = y + rounded_noise_val_y;
+                position_data[position_data_size][2] = z;
                 position_data_size++;
+
+                /*                 if (rounded_noise_val_y > 0)
+                                {
+                                    int diff = (int)rounded_noise_val_y;
+                                    extra_added += diff;
+                                    position_data = realloc(position_data, (max_x * max_y * max_z * sizeof(vec3)) + (extra_added * sizeof(vec3)));
+
+                                    while (rounded_noise_val_y > 0.0f)
+                                    {
+                                        rounded_noise_val_y -= 1.0f;
+                                        position_data[position_data_size][0] = x;
+                                        position_data[position_data_size][1] = y + rounded_noise_val_y;
+                                        position_data[position_data_size][2] = z;
+                                        position_data_size++;
+                                    }
+                                } */
             }
-        }
-    }
-
-    int filtered_position_data_size = 0;
-    for (int i = 0; i < position_data_size; i++)
-    {
-        if (!is_surrounded(position_data, i, position_data_size))
-        {
-            filtered_position_data_size++;
-        }
-    }
-
-    vec3 *filtered_position_data = malloc(filtered_position_data_size * sizeof(vec3));
-    int filtered_position_data_index = 0;
-    for (int i = 0; i < position_data_size; i++)
-    {
-        if (!is_surrounded(position_data, i, position_data_size))
-        {
-            filtered_position_data[filtered_position_data_index][0] = position_data[i][0];
-            filtered_position_data[filtered_position_data_index][1] = position_data[i][1];
-            filtered_position_data[filtered_position_data_index][2] = position_data[i][2];
-            filtered_position_data_index++;
         }
     }
 
@@ -101,14 +109,14 @@ void renderer_init()
         {-0.5f, -0.5f, 0.5f},
     };
 
-    vec3 *cubes_vertex_data = malloc(filtered_position_data_size * 8 * sizeof(vec3));
+    vec3 *cubes_vertex_data = malloc(position_data_size * 8 * sizeof(vec3));
 
-    for (int i = 0; i < filtered_position_data_size; i++)
+    for (int i = 0; i < position_data_size; i++)
     {
         for (int j = 0; j < 8; j++)
         {
             vec3 intermediate;
-            glm_vec3_add(filtered_position_data[i], cube_positions[j], intermediate);
+            glm_vec3_add(position_data[i], cube_positions[j], intermediate);
 
             cubes_vertex_data[i * 8 + j][0] = intermediate[0];
             cubes_vertex_data[i * 8 + j][1] = intermediate[1];
@@ -116,7 +124,7 @@ void renderer_init()
         }
     }
 
-    renderer_vbo_data(filtered_position_data_size * 8 * sizeof(vec3), cubes_vertex_data);
+    renderer_vbo_data(position_data_size * 8 * sizeof(vec3), cubes_vertex_data);
     renderer_vbo_attr(0, 3);
 
     GLushort cube_indices[] = {
@@ -133,9 +141,9 @@ void renderer_init()
         2, 1, 4,
         0, 2, 7};
 
-    GLushort *cube_block_indices = malloc(sizeof(GLushort) * filtered_position_data_size * 36);
+    GLushort *cube_block_indices = malloc(sizeof(GLushort) * position_data_size * 36);
 
-    for (int i = 0; i < filtered_position_data_size; ++i)
+    for (int i = 0; i < position_data_size; ++i)
     {
         for (int j = 0; j < 36; ++j)
         {
@@ -143,12 +151,7 @@ void renderer_init()
         }
     }
 
-    renderer_ibo_data(filtered_position_data_size * 36 * sizeof(GLushort), cube_block_indices);
-
-    free(position_data);
-    free(filtered_position_data);
-    free(cubes_vertex_data);
-    free(cube_block_indices);
+    renderer_ibo_data(position_data_size * 36 * sizeof(GLushort), cube_block_indices);
 }
 
 void renderer_vbo_data(GLsizeiptr size, void *data)

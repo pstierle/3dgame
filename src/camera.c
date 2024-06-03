@@ -9,7 +9,7 @@ void camera_init()
 {
     Camera *camera = &state.camera;
 
-    glm_vec3_copy((vec3){10.0f, 10.0f, 50.0f}, camera->position);
+    glm_vec3_copy((vec3){0.0f, 30.0f, 0.0f}, camera->position);
     glm_vec3_copy((vec3){0.0f, 0.0f, -1.0f}, camera->front);
     glm_vec3_copy((vec3){0.0f, 1.0f, 0.0f}, camera->up);
 

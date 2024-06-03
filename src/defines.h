@@ -3,7 +3,7 @@
 #include "cglm/cglm.h"
 #include "gfx.h"
 
-#define CAMERA_SPEED 8.0f
+#define CAMERA_SPEED 20.0f
 #define MOUSE_SENSITIVITY 0.2f
 #define VEC3_PER_CUBE 8
 
