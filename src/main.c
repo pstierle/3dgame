@@ -18,9 +18,16 @@ int main()
 
     while (!glfwWindowShouldClose(state.window.handle))
     {
+        // input
+
         window_input();
+
+        // update
+
         camera_update();
         renderer_update();
+
+        // render
 
         renderer_render();
 

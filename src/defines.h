@@ -3,7 +3,7 @@
 #include "cglm/cglm.h"
 #include "gfx.h"
 
-#define CAMERA_SPEED 20.0f
+#define CAMERA_SPEED 140.0f
 #define MOUSE_SENSITIVITY 0.2f
 #define VEC3_PER_CUBE 8
 
@@ -36,11 +36,14 @@ typedef struct Renderer
     GLuint ibo_id;
     GLuint vbo_id;
     GLuint vao_id;
-    size_t ibo_num_indices;
+    GLuint instance_vbo_id;
 
     GLuint model_location;
     GLuint view_location;
     GLuint projection_location;
+
+    int ibo_num_indices;
+    int num_instances;
 } Renderer;
 
 typedef struct Mouse

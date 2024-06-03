@@ -9,7 +9,9 @@ extern State state;
 
 bool is_surrounded(vec3 position_data[], int index, int position_data_size)
 {
-    vec3 pos = {position_data[index][0], position_data[index][1], position_data[index][2]};
+    float pos_x = position_data[index][0];
+    float pos_y = position_data[index][1];
+    float pos_z = position_data[index][2];
 
     bool has_neighbor_xp = false, has_neighbor_xm = false;
     bool has_neighbor_yp = false, has_neighbor_ym = false;
@@ -17,21 +19,23 @@ bool is_surrounded(vec3 position_data[], int index, int position_data_size)
 
     for (int i = 0; i < position_data_size; ++i)
     {
-        if (i == index)
-            continue;
-        vec3 neighbor = {position_data[i][0], position_data[i][1], position_data[i][2]};
+        if (has_neighbor_xp && has_neighbor_xm && has_neighbor_yp && has_neighbor_ym && has_neighbor_zp && has_neighbor_zm)
+            return true;
 
-        if (neighbor[0] == pos[0] + 1 && neighbor[1] == pos[1] && neighbor[2] == pos[2])
+        vec3 neighbor;
+        glm_vec3_copy(position_data[i], neighbor);
+
+        if (neighbor[0] == pos_x + 1 && neighbor[1] == pos_y && neighbor[2] == pos_z)
             has_neighbor_xp = true;
-        if (neighbor[0] == pos[0] - 1 && neighbor[1] == pos[1] && neighbor[2] == pos[2])
+        else if (neighbor[0] == pos_x - 1 && neighbor[1] == pos_y && neighbor[2] == pos_z)
             has_neighbor_xm = true;
-        if (neighbor[0] == pos[0] && neighbor[1] == pos[1] + 1 && neighbor[2] == pos[2])
+        else if (neighbor[0] == pos_x && neighbor[1] == pos_y + 1 && neighbor[2] == pos_z)
             has_neighbor_yp = true;
-        if (neighbor[0] == pos[0] && neighbor[1] == pos[1] - 1 && neighbor[2] == pos[2])
+        else if (neighbor[0] == pos_x && neighbor[1] == pos_y - 1 && neighbor[2] == pos_z)
             has_neighbor_ym = true;
-        if (neighbor[0] == pos[0] && neighbor[1] == pos[1] && neighbor[2] == pos[2] + 1)
+        else if (neighbor[0] == pos_x && neighbor[1] == pos_y && neighbor[2] == pos_z + 1)
             has_neighbor_zp = true;
-        if (neighbor[0] == pos[0] && neighbor[1] == pos[1] && neighbor[2] == pos[2] - 1)
+        else if (neighbor[0] == pos_x && neighbor[1] == pos_y && neighbor[2] == pos_z - 1)
             has_neighbor_zm = true;
     }
 
@@ -53,52 +57,63 @@ void renderer_init()
     glGenVertexArrays(1, &renderer->vao_id);
     glGenBuffers(1, &renderer->vbo_id);
     glGenBuffers(1, &renderer->ibo_id);
+    glGenBuffers(1, &renderer->instance_vbo_id);
 
-    int max_x = 200;
-    int max_y = 1;
-    int max_z = 200;
+    int max_x = 20;
+    int max_z = 20;
 
-    vec3 *position_data = malloc(max_x * max_y * max_z * sizeof(vec3));
+    vec3 *position_data = malloc(max_x * max_z * sizeof(vec3));
     int position_data_size = 0;
-    int extra_added = 0;
 
     fnl_state noise = fnlCreateState();
+    noise.noise_type = FNL_NOISE_OPENSIMPLEX2;
+    noise.frequency = 0.01;
+    noise.domain_warp_amp = 10.0f;
+    noise.octaves = 6;
+    noise.lacunarity = 1.5;
 
     for (int x = 0; x < max_x; ++x)
     {
-        for (int y = 0; y < max_y; ++y)
+        for (int z = 0; z < max_z; ++z)
         {
-            for (int z = 0; z < max_z; ++z)
-            {
-                float noise_val_y = fnlGetNoise3D(&noise, x, y, z);
-                float scaled_noise_val_y = fmaxf(0.0f, fminf(30.0f, noise_val_y * 20.0f + 10.0f));
-                float rounded_noise_val_y = roundf(scaled_noise_val_y);
+            // float noise_val_y = fnlGetNoise3D(&noise, x, 0, z);
+            // float scaled_noise_val_y = fmaxf(0.0f, fminf(64.0f, noise_val_y * 20.0f + 32.0f));
+            // int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
 
+            // position_data[position_data_size][0] = x;
+            // position_data[position_data_size][1] = rounded_noise_val_y;
+            // position_data[position_data_size][2] = z;
+            // position_data_size++;
+
+            float noise_val_y = fnlGetNoise3D(&noise, x, 0, z);
+            float scaled_noise_val_y = fmaxf(0.0f, fminf(64.0f, noise_val_y * 20.0f + 32.0f));
+            int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
+
+            position_data = realloc(position_data, (position_data_size + rounded_noise_val_y) * sizeof(vec3));
+
+            for (int y = 0; y < rounded_noise_val_y; ++y)
+            {
                 position_data[position_data_size][0] = x;
-                position_data[position_data_size][1] = y + rounded_noise_val_y;
+                position_data[position_data_size][1] = y;
                 position_data[position_data_size][2] = z;
                 position_data_size++;
-
-                /*                 if (rounded_noise_val_y > 0)
-                                {
-                                    int diff = (int)rounded_noise_val_y;
-                                    extra_added += diff;
-                                    position_data = realloc(position_data, (max_x * max_y * max_z * sizeof(vec3)) + (extra_added * sizeof(vec3)));
-
-                                    while (rounded_noise_val_y > 0.0f)
-                                    {
-                                        rounded_noise_val_y -= 1.0f;
-                                        position_data[position_data_size][0] = x;
-                                        position_data[position_data_size][1] = y + rounded_noise_val_y;
-                                        position_data[position_data_size][2] = z;
-                                        position_data_size++;
-                                    }
-                                } */
             }
         }
     }
 
-    vec3 cube_positions[8] = {
+    int position_data_filtered_size = 0;
+    vec3 *position_data_filtered = malloc(position_data_size * sizeof(vec3));
+
+    for (int i = 0; i < position_data_size; i++)
+    {
+        if (is_surrounded(position_data, i, position_data_size) == false)
+        {
+            glm_vec3_copy(position_data[i], position_data_filtered[position_data_filtered_size]);
+            position_data_filtered_size++;
+        }
+    }
+
+    vec3 cube_positions[] = {
         {0.5f, 0.5f, 0.5f},
         {-0.5f, 0.5f, -0.5f},
         {-0.5f, 0.5f, 0.5f},
@@ -106,26 +121,7 @@ void renderer_init()
         {-0.5f, -0.5f, -0.5f},
         {0.5f, 0.5f, -0.5f},
         {0.5f, -0.5f, 0.5f},
-        {-0.5f, -0.5f, 0.5f},
-    };
-
-    vec3 *cubes_vertex_data = malloc(position_data_size * 8 * sizeof(vec3));
-
-    for (int i = 0; i < position_data_size; i++)
-    {
-        for (int j = 0; j < 8; j++)
-        {
-            vec3 intermediate;
-            glm_vec3_add(position_data[i], cube_positions[j], intermediate);
-
-            cubes_vertex_data[i * 8 + j][0] = intermediate[0];
-            cubes_vertex_data[i * 8 + j][1] = intermediate[1];
-            cubes_vertex_data[i * 8 + j][2] = intermediate[2];
-        }
-    }
-
-    renderer_vbo_data(position_data_size * 8 * sizeof(vec3), cubes_vertex_data);
-    renderer_vbo_attr(0, 3);
+        {-0.5f, -0.5f, 0.5f}};
 
     GLushort cube_indices[] = {
         0, 1, 2,
@@ -141,46 +137,29 @@ void renderer_init()
         2, 1, 4,
         0, 2, 7};
 
-    GLushort *cube_block_indices = malloc(sizeof(GLushort) * position_data_size * 36);
+    glBindVertexArray(renderer->vao_id);
 
-    for (int i = 0; i < position_data_size; ++i)
-    {
-        for (int j = 0; j < 36; ++j)
-        {
-            cube_block_indices[i * 36 + j] = cube_indices[j] + i * 8;
-        }
-    }
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo_id);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_positions), cube_positions, GL_STATIC_DRAW);
 
-    renderer_ibo_data(position_data_size * 36 * sizeof(GLushort), cube_block_indices);
-}
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 
-void renderer_vbo_data(GLsizeiptr size, void *data)
-{
-    glBindVertexArray(state.renderer.vao_id);
-    glBindBuffer(GL_ARRAY_BUFFER, state.renderer.vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-}
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->instance_vbo_id);
+    glBufferData(GL_ARRAY_BUFFER, position_data_filtered_size * sizeof(vec3), position_data_filtered, GL_STATIC_DRAW);
 
-void renderer_vbo_attr(GLuint index, GLint size)
-{
-    glBindBuffer(GL_ARRAY_BUFFER, state.renderer.vbo_id);
-    glEnableVertexAttribArray(index);
-    glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, size * sizeof(float), (void *)0);
-}
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribDivisor(1, 1);
 
-void renderer_ibo_data(int num_elements, void *data)
-{
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.renderer.ibo_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, num_elements * sizeof(GLushort), data, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ibo_id);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_indices), cube_indices, GL_STATIC_DRAW);
 
-    Renderer *renderer = &state.renderer;
-    renderer->ibo_num_indices = num_elements;
-}
+    renderer->ibo_num_indices = sizeof(cube_indices) / sizeof(GLushort);
+    renderer->num_instances = position_data_filtered_size;
 
-void renderer_ibo_draw(GLsizei count)
-{
-    glBindVertexArray(state.renderer.vbo_id);
-    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_SHORT, 0);
+    free(position_data);
+    free(position_data_filtered);
 }
 
 void renderer_update()
@@ -202,7 +181,7 @@ void renderer_update()
     glm_lookat(camera->position, center, camera->up, view);
 
     mat4 projection = GLM_MAT4_IDENTITY_INIT;
-    glm_perspective(glm_rad(camera->fov), 1600.0f / 900.0f, 0.1f, 100.0f, projection);
+    glm_perspective(glm_rad(camera->fov), 1600.0f / 900.0f, 0.1f, 50000.0f, projection);
 
     glUniformMatrix4fv(renderer->model_location, 1, GL_FALSE, (const GLfloat *)model);
     glUniformMatrix4fv(renderer->view_location, 1, GL_FALSE, (const GLfloat *)view);
@@ -224,7 +203,8 @@ void renderer_render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
-    renderer_ibo_draw(state.renderer.ibo_num_indices);
+    glBindVertexArray(state.renderer.vao_id);
+    glDrawElementsInstanced(GL_TRIANGLES, state.renderer.ibo_num_indices, GL_UNSIGNED_SHORT, 0, state.renderer.num_instances);
 }
 
 void renderer_toogle_wireframe()
