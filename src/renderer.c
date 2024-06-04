@@ -42,6 +42,62 @@ bool is_surrounded(vec3 position_data[], int index, int position_data_size)
     return has_neighbor_xp && has_neighbor_xm && has_neighbor_yp && has_neighbor_ym && has_neighbor_zp && has_neighbor_zm;
 }
 
+void generate_position_data(vec3 **position_data, int *position_data_size)
+{
+    int max_x = 40;
+    int max_z = 40;
+
+    *position_data = malloc(max_x * max_z * sizeof(vec3));
+    *position_data_size = 0;
+
+    fnl_state noise = fnlCreateState();
+    noise.noise_type = FNL_NOISE_OPENSIMPLEX2;
+    noise.frequency = 0.01;
+    noise.domain_warp_amp = 10.0f;
+    noise.octaves = 6;
+    noise.lacunarity = 1.5;
+
+    for (int x = 0; x < max_x; ++x)
+    {
+        for (int z = 0; z < max_z; ++z)
+        {
+            float noise_val_y = fnlGetNoise3D(&noise, x, 0, z);
+            float scaled_noise_val_y = fmaxf(0.0f, fminf(64.0f, noise_val_y * 20.0f + 32.0f));
+            int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
+
+            *position_data = realloc(**position_data, (*position_data_size + rounded_noise_val_y) * sizeof(vec3));
+
+            for (int y = 0; y < rounded_noise_val_y; ++y)
+            {
+                (*position_data)[*position_data_size][0] = x;
+                (*position_data)[*position_data_size][1] = y;
+                (*position_data)[*position_data_size][2] = z;
+                (*position_data_size)++;
+            }
+        }
+    }
+}
+
+void filter_surrounded_cubes(vec3 **position_data, int *position_data_size)
+{
+    vec3 *filtered = malloc(*position_data_size * sizeof(vec3));
+    int filtered_size = 0;
+
+    for (int i = 0; i < *position_data_size; i++)
+    {
+        if (is_surrounded(*position_data, i, *position_data_size) == false)
+        {
+            glm_vec3_copy((*position_data)[i], filtered[filtered_size]);
+            filtered_size++;
+        }
+    }
+
+    filtered = realloc(filtered, filtered_size * sizeof(vec3));
+    free(*position_data); // Free the original position data
+    *position_data = filtered;
+    *position_data_size = filtered_size;
+}
+
 void renderer_init()
 {
     Renderer *renderer = &state.renderer;
@@ -59,59 +115,25 @@ void renderer_init()
     glGenBuffers(1, &renderer->ibo_id);
     glGenBuffers(1, &renderer->instance_vbo_id);
 
-    int max_x = 20;
-    int max_z = 20;
-
-    vec3 *position_data = malloc(max_x * max_z * sizeof(vec3));
+    vec3 *position_data = NULL;
     int position_data_size = 0;
 
-    fnl_state noise = fnlCreateState();
-    noise.noise_type = FNL_NOISE_OPENSIMPLEX2;
-    noise.frequency = 0.01;
-    noise.domain_warp_amp = 10.0f;
-    noise.octaves = 6;
-    noise.lacunarity = 1.5;
+    clock_t start_time, end_time;
+    double cpu_time_used;
 
-    for (int x = 0; x < max_x; ++x)
-    {
-        for (int z = 0; z < max_z; ++z)
-        {
-            // float noise_val_y = fnlGetNoise3D(&noise, x, 0, z);
-            // float scaled_noise_val_y = fmaxf(0.0f, fminf(64.0f, noise_val_y * 20.0f + 32.0f));
-            // int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
+    // Timing generate_position_data
+    start_time = clock();
+    generate_position_data(&position_data, &position_data_size);
+    end_time = clock();
+    cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+    printf("generate_position_data took %f seconds to execute \n", cpu_time_used);
 
-            // position_data[position_data_size][0] = x;
-            // position_data[position_data_size][1] = rounded_noise_val_y;
-            // position_data[position_data_size][2] = z;
-            // position_data_size++;
-
-            float noise_val_y = fnlGetNoise3D(&noise, x, 0, z);
-            float scaled_noise_val_y = fmaxf(0.0f, fminf(64.0f, noise_val_y * 20.0f + 32.0f));
-            int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
-
-            position_data = realloc(position_data, (position_data_size + rounded_noise_val_y) * sizeof(vec3));
-
-            for (int y = 0; y < rounded_noise_val_y; ++y)
-            {
-                position_data[position_data_size][0] = x;
-                position_data[position_data_size][1] = y;
-                position_data[position_data_size][2] = z;
-                position_data_size++;
-            }
-        }
-    }
-
-    int position_data_filtered_size = 0;
-    vec3 *position_data_filtered = malloc(position_data_size * sizeof(vec3));
-
-    for (int i = 0; i < position_data_size; i++)
-    {
-        if (is_surrounded(position_data, i, position_data_size) == false)
-        {
-            glm_vec3_copy(position_data[i], position_data_filtered[position_data_filtered_size]);
-            position_data_filtered_size++;
-        }
-    }
+    // Timing filter_surrounded_cubes
+    start_time = clock();
+    filter_surrounded_cubes(&position_data, &position_data_size);
+    end_time = clock();
+    cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+    printf("filter_surrounded_cubes took %f seconds to execute \n", cpu_time_used);
 
     vec3 cube_positions[] = {
         {0.5f, 0.5f, 0.5f},
@@ -146,7 +168,7 @@ void renderer_init()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 
     glBindBuffer(GL_ARRAY_BUFFER, renderer->instance_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, position_data_filtered_size * sizeof(vec3), position_data_filtered, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, position_data_size * sizeof(vec3), position_data, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
@@ -156,10 +178,9 @@ void renderer_init()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_indices), cube_indices, GL_STATIC_DRAW);
 
     renderer->ibo_num_indices = sizeof(cube_indices) / sizeof(GLushort);
-    renderer->num_instances = position_data_filtered_size;
+    renderer->num_instances = position_data_size;
 
     free(position_data);
-    free(position_data_filtered);
 }
 
 void renderer_update()
