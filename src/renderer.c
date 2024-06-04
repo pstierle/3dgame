@@ -5,135 +5,67 @@
 #include "noise.h"
 #include "time.h"
 
+Chunk *chunks;
+int chunks_count = 100;
+
 extern State state;
 
-bool is_surrounded(vec3 position_data[], int index, int position_data_size)
+void generate_chunks()
 {
-    float pos_x = position_data[index][0];
-    float pos_y = position_data[index][1];
-    float pos_z = position_data[index][2];
+    int chunk_size = 200;
 
-    bool has_neighbor_xp = false, has_neighbor_xm = false;
-    bool has_neighbor_yp = false, has_neighbor_ym = false;
-    bool has_neighbor_zp = false, has_neighbor_zm = false;
-
-    for (int i = 0; i < position_data_size; ++i)
-    {
-        if (has_neighbor_xp && has_neighbor_xm && has_neighbor_yp && has_neighbor_ym && has_neighbor_zp && has_neighbor_zm)
-            return true;
-
-        vec3 neighbor;
-        glm_vec3_copy(position_data[i], neighbor);
-
-        if (neighbor[0] == pos_x + 1 && neighbor[1] == pos_y && neighbor[2] == pos_z)
-            has_neighbor_xp = true;
-        else if (neighbor[0] == pos_x - 1 && neighbor[1] == pos_y && neighbor[2] == pos_z)
-            has_neighbor_xm = true;
-        else if (neighbor[0] == pos_x && neighbor[1] == pos_y + 1 && neighbor[2] == pos_z)
-            has_neighbor_yp = true;
-        else if (neighbor[0] == pos_x && neighbor[1] == pos_y - 1 && neighbor[2] == pos_z)
-            has_neighbor_ym = true;
-        else if (neighbor[0] == pos_x && neighbor[1] == pos_y && neighbor[2] == pos_z + 1)
-            has_neighbor_zp = true;
-        else if (neighbor[0] == pos_x && neighbor[1] == pos_y && neighbor[2] == pos_z - 1)
-            has_neighbor_zm = true;
-    }
-
-    return has_neighbor_xp && has_neighbor_xm && has_neighbor_yp && has_neighbor_ym && has_neighbor_zp && has_neighbor_zm;
-}
-
-void generate_position_data(vec3 **position_data, int *position_data_size)
-{
-    int max_x = 40;
-    int max_z = 40;
-
-    *position_data = malloc(max_x * max_z * sizeof(vec3));
-    *position_data_size = 0;
+    chunks = malloc(sizeof(Chunk) * chunks_count);
 
     fnl_state noise = fnlCreateState();
+    noise.seed = 1337;
     noise.noise_type = FNL_NOISE_OPENSIMPLEX2;
-    noise.frequency = 0.01;
-    noise.domain_warp_amp = 10.0f;
-    noise.octaves = 6;
-    noise.lacunarity = 1.5;
+    noise.frequency = 0.005f;
+    noise.octaves = 5;
+    noise.lacunarity = 2.0f;
+    noise.gain = 0.5f;
+    noise.fractal_type = FNL_FRACTAL_FBM;
 
-    for (int x = 0; x < max_x; ++x)
+    for (int i = 0; i < chunks_count; i++)
     {
-        for (int z = 0; z < max_z; ++z)
+        Chunk *chunk = malloc(sizeof(Chunk));
+        chunk->data = malloc(chunk_size * chunk_size * sizeof(vec3) * 100);
+
+        int offset_x = (i % (int)sqrt(chunks_count)) * chunk_size;
+        int offset_z = (i / (int)sqrt(chunks_count)) * chunk_size;
+
+        chunk->position[0] = offset_x + chunk_size / 2;
+        chunk->position[1] = 0.0f;
+        chunk->position[2] = offset_z + chunk_size / 2;
+
+        int current_chunk_size = 0;
+
+        for (int x = 0; x < chunk_size; ++x)
         {
-            float noise_val_y = fnlGetNoise3D(&noise, x, 0, z);
-            float scaled_noise_val_y = fmaxf(0.0f, fminf(64.0f, noise_val_y * 20.0f + 32.0f));
-            int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
-
-            *position_data = realloc(**position_data, (*position_data_size + rounded_noise_val_y) * sizeof(vec3));
-
-            for (int y = 0; y < rounded_noise_val_y; ++y)
+            for (int z = 0; z < chunk_size; ++z)
             {
-                (*position_data)[*position_data_size][0] = x;
-                (*position_data)[*position_data_size][1] = y;
-                (*position_data)[*position_data_size][2] = z;
-                (*position_data_size)++;
+                float noise_val_y = fnlGetNoise3D(&noise, x + offset_x, 0, z + offset_z);
+                float scaled_noise_val_y = fmaxf(0.0f, fminf(128.0f, noise_val_y * 60.0f + 64.0f));
+                int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
+
+                for (int y = 0; y < rounded_noise_val_y; y++)
+                {
+                    chunk->data[current_chunk_size][0] = x + offset_x;
+                    chunk->data[current_chunk_size][1] = y;
+                    chunk->data[current_chunk_size][2] = z + offset_z;
+
+                    current_chunk_size++;
+                }
             }
         }
+
+        chunk->cube_count = current_chunk_size;
+        chunks[i] = *chunk;
     }
 }
 
-void filter_surrounded_cubes(vec3 **position_data, int *position_data_size)
-{
-    vec3 *filtered = malloc(*position_data_size * sizeof(vec3));
-    int filtered_size = 0;
-
-    for (int i = 0; i < *position_data_size; i++)
-    {
-        if (is_surrounded(*position_data, i, *position_data_size) == false)
-        {
-            glm_vec3_copy((*position_data)[i], filtered[filtered_size]);
-            filtered_size++;
-        }
-    }
-
-    filtered = realloc(filtered, filtered_size * sizeof(vec3));
-    free(*position_data); // Free the original position data
-    *position_data = filtered;
-    *position_data_size = filtered_size;
-}
-
-void renderer_init()
+void load_chunk(int index)
 {
     Renderer *renderer = &state.renderer;
-
-    renderer->delta_time = 0.0f;
-    renderer->last_frame_time = glfwGetTime();
-    renderer->wireframe_enabled = false;
-
-    renderer->model_location = glGetUniformLocation(renderer->program_id, "model");
-    renderer->view_location = glGetUniformLocation(renderer->program_id, "view");
-    renderer->projection_location = glGetUniformLocation(renderer->program_id, "projection");
-
-    glGenVertexArrays(1, &renderer->vao_id);
-    glGenBuffers(1, &renderer->vbo_id);
-    glGenBuffers(1, &renderer->ibo_id);
-    glGenBuffers(1, &renderer->instance_vbo_id);
-
-    vec3 *position_data = NULL;
-    int position_data_size = 0;
-
-    clock_t start_time, end_time;
-    double cpu_time_used;
-
-    // Timing generate_position_data
-    start_time = clock();
-    generate_position_data(&position_data, &position_data_size);
-    end_time = clock();
-    cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-    printf("generate_position_data took %f seconds to execute \n", cpu_time_used);
-
-    // Timing filter_surrounded_cubes
-    start_time = clock();
-    filter_surrounded_cubes(&position_data, &position_data_size);
-    end_time = clock();
-    cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-    printf("filter_surrounded_cubes took %f seconds to execute \n", cpu_time_used);
 
     vec3 cube_positions[] = {
         {0.5f, 0.5f, 0.5f},
@@ -168,7 +100,7 @@ void renderer_init()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 
     glBindBuffer(GL_ARRAY_BUFFER, renderer->instance_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, position_data_size * sizeof(vec3), position_data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, chunks[index].cube_count * sizeof(vec3), chunks[index].data, GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
@@ -178,9 +110,27 @@ void renderer_init()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_indices), cube_indices, GL_STATIC_DRAW);
 
     renderer->ibo_num_indices = sizeof(cube_indices) / sizeof(GLushort);
-    renderer->num_instances = position_data_size;
+    renderer->num_instances = chunks[index].cube_count;
+}
 
-    free(position_data);
+void renderer_init()
+{
+    Renderer *renderer = &state.renderer;
+
+    renderer->delta_time = 0.0f;
+    renderer->last_frame_time = glfwGetTime();
+    renderer->wireframe_enabled = false;
+
+    renderer->model_location = glGetUniformLocation(renderer->program_id, "model");
+    renderer->view_location = glGetUniformLocation(renderer->program_id, "view");
+    renderer->projection_location = glGetUniformLocation(renderer->program_id, "projection");
+
+    glGenVertexArrays(1, &renderer->vao_id);
+    glGenBuffers(1, &renderer->vbo_id);
+    glGenBuffers(1, &renderer->ibo_id);
+    glGenBuffers(1, &renderer->instance_vbo_id);
+
+    generate_chunks();
 }
 
 void renderer_update()
@@ -202,11 +152,34 @@ void renderer_update()
     glm_lookat(camera->position, center, camera->up, view);
 
     mat4 projection = GLM_MAT4_IDENTITY_INIT;
-    glm_perspective(glm_rad(camera->fov), 1600.0f / 900.0f, 0.1f, 50000.0f, projection);
+    glm_perspective(glm_rad(camera->fov), 1600.0f / 900.0f, 0.1f, 5000.0f, projection);
 
     glUniformMatrix4fv(renderer->model_location, 1, GL_FALSE, (const GLfloat *)model);
     glUniformMatrix4fv(renderer->view_location, 1, GL_FALSE, (const GLfloat *)view);
     glUniformMatrix4fv(renderer->projection_location, 1, GL_FALSE, (const GLfloat *)projection);
+
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(state.renderer.program_id);
+
+    if (state.renderer.wireframe_enabled == true)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
+    else
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    for (int i = 0; i < chunks_count; i++)
+    {
+        if (glm_vec3_distance(camera->position, chunks[i].position) < 500.0f)
+        {
+            load_chunk(i);
+            glBindVertexArray(state.renderer.vao_id);
+            glDrawElementsInstanced(GL_TRIANGLES, state.renderer.ibo_num_indices, GL_UNSIGNED_SHORT, 0, state.renderer.num_instances);
+        }
+    }
 }
 
 void renderer_render()

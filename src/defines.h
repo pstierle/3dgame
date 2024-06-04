@@ -3,15 +3,16 @@
 #include "cglm/cglm.h"
 #include "gfx.h"
 
-#define CAMERA_SPEED 140.0f
+#define CAMERA_SPEED 300.0f
 #define MOUSE_SENSITIVITY 0.2f
 #define VEC3_PER_CUBE 8
 
-typedef struct Collection
+typedef struct Chunk
 {
-    void *data;
-    size_t size;
-} Collection;
+    vec3 position;
+    vec3 *data;
+    int cube_count;
+} Chunk;
 
 typedef struct Camera
 {

@@ -27,10 +27,6 @@ int main()
         camera_update();
         renderer_update();
 
-        // render
-
-        renderer_render();
-
         glfwSwapBuffers(state.window.handle);
     }
 
