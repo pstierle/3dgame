@@ -4,7 +4,12 @@
 #include "noise.h"
 #include "util.h"
 #include <pthread.h>
-#include <unistd.h> // For sysconf
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 extern State state;
 
@@ -21,7 +26,7 @@ int num_chunks_loaded = 0;
 void update_process()
 {
     num_chunks_loaded++;
-    print_i(num_chunks_loaded);
+    // print_i(num_chunks_loaded);
 }
 
 void *generate_chunks(void *arg)
@@ -55,11 +60,19 @@ void world_generate()
     noise.gain = 0.5f;
     noise.fractal_type = FNL_FRACTAL_FBM;
 
-    int num_processors = sysconf(_SC_NPROCESSORS_ONLN);
+    int num_processors;
+
+#ifdef _WIN32
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    num_processors = sysinfo.dwNumberOfProcessors;
+#else
+    num_processors = sysconf(_SC_NPROCESSORS_ONLN);
     if (num_processors < 1)
     {
         num_processors = 1;
     }
+#endif
 
     pthread_t threads[num_processors];
     ThreadData thread_data[num_processors];
@@ -99,6 +112,25 @@ void world_update()
 
 void world_render()
 {
+    glUseProgram(state.renderer.program_id);
+
+    Renderer *renderer = &state.renderer;
+    Camera *camera = &state.camera;
+
+    mat4 model = GLM_MAT4_IDENTITY_INIT;
+    mat4 view = GLM_MAT4_IDENTITY_INIT;
+    mat4 projection = GLM_MAT4_IDENTITY_INIT;
+
+    vec3 center;
+
+    glm_vec3_add(camera->position, camera->front, center);
+    glm_lookat(camera->position, center, camera->up, view);
+    glm_perspective(glm_rad(camera->fov), 1600.0f / 900.0f, 0.1f, 5000.0f, projection);
+
+    glUniformMatrix4fv(renderer->model_location, 1, GL_FALSE, (const GLfloat *)model);
+    glUniformMatrix4fv(renderer->view_location, 1, GL_FALSE, (const GLfloat *)view);
+    glUniformMatrix4fv(renderer->projection_location, 1, GL_FALSE, (const GLfloat *)projection);
+
     for (int i = 0; i < CHUNKS_COUNT; i++)
     {
         if (state.chunks[i].visible)

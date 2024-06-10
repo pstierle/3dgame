@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -Wextra -Iinclude -Iinclude/GLFW -Iinclude/glad -Iinclude/KHR -Iinclude/stb-image -Iinclude/fast-noise 
+CFLAGS = -Wall -Wextra -Iinclude -Iinclude/GLFW -Iinclude/glad -Iinclude/KHR -Iinclude/fast-noise 
 
 SRCDIR = src
 OBJDIR = obj
@@ -7,16 +7,22 @@ OBJDIR = obj
 SRCS = $(wildcard $(SRCDIR)/*.c)
 OBJS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SRCS))
 
-UNAME_S := $(shell uname -s)
-
-ifeq ($(UNAME_S), Darwin)
-    LDFLAGS = -Llib/mac -lglfw3 -framework OpenGL -framework IOKit -framework CoreVideo -framework Cocoa
-	TARGET = game
-else ifeq ($(UNAME_S), Windows_NT)
+ifeq ($(OS), Windows_NT)
+    CC = gcc
     LDFLAGS = -Llib/win -lglfw3 -lopengl32 -lgdi32 -lwinmm
-	TARGET = game.exe
+    TARGET = game.exe
+    MKDIR = mkdir
+    RMDIR = if exist $(OBJDIR) rmdir /s /q $(OBJDIR)
+    RM = del /f /q
+    RMOBJ = powershell -Command "if (Test-Path '$(OBJDIR)') { Remove-Item -Path '$(OBJDIR)\\*' -Force }"
 else
-    $(error Unsupported operating system)
+    CC = clang
+    LDFLAGS = -Llib/mac -lglfw3 -framework OpenGL -framework IOKit -framework CoreVideo -framework Cocoa
+    TARGET = game
+    MKDIR = mkdir -p
+    RMDIR = rm -rf $(OBJDIR)
+    RM = rm -f
+    RMOBJ = rm -f $(OBJDIR)/*.o
 endif
 
 .PHONY: all clean
@@ -30,8 +36,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR)
+	$(MKDIR) $(OBJDIR)
 
 clean:
-	rm -f $(TARGET) $(OBJDIR)/*.o
-	rm -rf $(OBJDIR)
+	-$(RM) $(TARGET)
+	-$(RMOBJ)
+	-$(RMDIR)
