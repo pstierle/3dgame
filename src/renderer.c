@@ -47,14 +47,11 @@ void generate_chunks()
                 float scaled_noise_val_y = fmaxf(0.0f, fminf(128.0f, noise_val_y * 60.0f + 64.0f));
                 int rounded_noise_val_y = (int)roundf(scaled_noise_val_y);
 
-                for (int y = 0; y < rounded_noise_val_y; y++)
-                {
-                    chunk->data[current_chunk_size][0] = x + offset_x;
-                    chunk->data[current_chunk_size][1] = y;
-                    chunk->data[current_chunk_size][2] = z + offset_z;
+                chunk->data[current_chunk_size][0] = x + offset_x;
+                chunk->data[current_chunk_size][1] = rounded_noise_val_y;
+                chunk->data[current_chunk_size][2] = z + offset_z;
 
-                    current_chunk_size++;
-                }
+                current_chunk_size++;
             }
         }
 

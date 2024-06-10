@@ -1,13 +1,23 @@
 CC = clang
 CFLAGS = -Wall -Wextra -Iinclude -Iinclude/GLFW -Iinclude/glad -Iinclude/KHR 
-LDFLAGS = -Llib/mac -lglfw3 -framework OpenGL -framework IOKit -framework CoreVideo -framework Cocoa
 
 SRCDIR = src
 OBJDIR = obj
 
 SRCS = $(wildcard $(SRCDIR)/*.c)
 OBJS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SRCS))
-TARGET = game
+
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S), Darwin)
+    LDFLAGS = -Llib/mac -lglfw3 -framework OpenGL -framework IOKit -framework CoreVideo -framework Cocoa
+	TARGET = game
+else ifeq ($(UNAME_S), Windows_NT)
+    LDFLAGS = -Llib/win -lglfw3 -lopengl32 -lgdi32 -lwinmm
+	TARGET = game.exe
+else
+    $(error Unsupported operating system)
+endif
 
 .PHONY: all clean
 
