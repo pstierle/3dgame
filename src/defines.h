@@ -6,9 +6,9 @@
 #define CAMERA_SPEED 300.0f
 #define MOUSE_SENSITIVITY 0.2f
 
-#define CHUNKS_COUNT 50
+#define CHUNKS_COUNT 500
 #define CHUNK_SIZE 200
-#define RENDER_DISTANCE 1500.0f
+#define RENDER_DISTANCE 500.0f
 
 typedef struct Chunk
 {
