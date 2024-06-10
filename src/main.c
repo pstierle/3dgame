@@ -1,9 +1,13 @@
+#define FNL_IMPL
+#include "noise.h"
+
 #include "gfx.h"
 #include "defines.h"
 #include "camera.h"
 #include "shader.h"
 #include "window.h"
 #include "renderer.h"
+#include "world.h"
 #include "cglm/cglm.h"
 #include "util.h"
 
@@ -15,6 +19,7 @@ int main()
     shader_init();
     renderer_init();
     camera_init();
+    world_generate();
 
     while (!glfwWindowShouldClose(state.window.handle))
     {
@@ -26,6 +31,11 @@ int main()
 
         camera_update();
         renderer_update();
+        world_update();
+
+        // render
+        renderer_prepare();
+        world_render();
 
         glfwSwapBuffers(state.window.handle);
     }

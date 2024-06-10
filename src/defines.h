@@ -5,13 +5,17 @@
 
 #define CAMERA_SPEED 300.0f
 #define MOUSE_SENSITIVITY 0.2f
-#define VEC3_PER_CUBE 8
+
+#define CHUNKS_COUNT 50
+#define CHUNK_SIZE 200
+#define RENDER_DISTANCE 1500.0f
 
 typedef struct Chunk
 {
     vec3 position;
-    vec3 *data;
-    int cube_count;
+    vec3 *cube_positions;
+    int cube_positions_size;
+    bool visible;
 } Chunk;
 
 typedef struct Camera
@@ -75,6 +79,7 @@ typedef struct State
     Window window;
     Renderer renderer;
     Camera camera;
+    Chunk *chunks;
 } State;
 
 extern struct State state;
