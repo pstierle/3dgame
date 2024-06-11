@@ -5,6 +5,60 @@
 
 extern State state;
 
+void check_shader_status(GLuint shader_id)
+{
+    GLint status;
+    glGetShaderiv(shader_id, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE)
+    {
+        GLint log_length;
+        glGetShaderiv(shader_id, GL_INFO_LOG_LENGTH, &log_length);
+
+        GLchar buffer[log_length];
+
+        GLsizei buffer_size;
+        glGetShaderInfoLog(shader_id, log_length, &buffer_size, buffer);
+
+        printf("Shader compile Error: %s", buffer);
+
+        exit(1);
+    }
+}
+
+void shader_init(GLuint *program_id, char *fs, char *vs)
+{
+    char *fragment_shader = read_file(fs);
+    char *vertex_shader = read_file(vs);
+
+    GLuint fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
+    GLuint vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
+
+    const char *fragment_shader_source[] = {fragment_shader};
+    const char *vertex_shader_source[] = {vertex_shader};
+
+    glShaderSource(fragment_shader_id, 1, fragment_shader_source, NULL);
+    glShaderSource(vertex_shader_id, 1, vertex_shader_source, NULL);
+
+    glCompileShader(fragment_shader_id);
+    glCompileShader(vertex_shader_id);
+
+    check_shader_status(fragment_shader_id);
+    check_shader_status(vertex_shader_id);
+
+    *program_id = glCreateProgram();
+
+    glAttachShader(*program_id, fragment_shader_id);
+    glAttachShader(*program_id, vertex_shader_id);
+
+    glLinkProgram(*program_id);
+
+    glDeleteShader(fragment_shader_id);
+    glDeleteShader(vertex_shader_id);
+
+    free(fragment_shader);
+    free(vertex_shader);
+}
+
 void renderer_init()
 {
     Renderer *renderer = &state.renderer;
@@ -12,6 +66,8 @@ void renderer_init()
     renderer->delta_time = 0.0f;
     renderer->last_frame_time = glfwGetTime();
     renderer->wireframe_enabled = false;
+
+    shader_init(&renderer->program_id, "shaders/basic.fs", "shaders/basic.vs");
 
     renderer->model_location = glGetUniformLocation(renderer->program_id, "model");
     renderer->view_location = glGetUniformLocation(renderer->program_id, "view");

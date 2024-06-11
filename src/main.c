@@ -4,7 +4,6 @@
 #include "gfx.h"
 #include "defines.h"
 #include "camera.h"
-#include "shader.h"
 #include "window.h"
 #include "renderer.h"
 #include "world.h"
@@ -16,7 +15,6 @@ State state;
 int main()
 {
     window_init();
-    shader_init();
     renderer_init();
     camera_init();
     world_generate();
